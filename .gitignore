@@ -1,0 +1,13 @@
+.venv/
+.pytest_cache/
+__pycache__/
+*.save
+logs/
+.idea/
+dist/
+.coverage
+coverage.xml
+.env
+.dockerignore
+Dockerfile
+*.sqlite3
