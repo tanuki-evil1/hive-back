@@ -151,7 +151,9 @@ class ActiveDirectory:
             search_filter=f'(&(objectClass=person)(sAMAccountName={username}))',
             attributes=['mail']
         )
-        return str(conn.entries[0].mail) or None
+        user_email = conn.entries[0].mail
+        user_email = str(user_email) if user_email else None
+        return user_email
 
     @connect_to_ldap
     def get_default_gal(self, *args):
