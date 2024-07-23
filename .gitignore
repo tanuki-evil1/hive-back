@@ -11,3 +11,4 @@ coverage.xml
 .dockerignore
 Dockerfile
 *.sqlite3
+integrations_test/active_directory/certificates/
