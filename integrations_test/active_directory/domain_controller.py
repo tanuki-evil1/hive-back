@@ -18,12 +18,12 @@ def connect_to_ldap(func):
     @wraps(func)
     def wrapper(service, username, password, *args, **kwargs):
         if '@' not in username:
-            conn_username = f'{service.domain_suffix}\\{username}'
+            conn_username = f'{service.domain_name}\\{username}'
         else:
             username, domain = username.split('@')
-            conn_username = f'{service.domain_suffix}\\{username}'
+            conn_username = f'{service.domain_name}\\{username}'
             user_address_domain = str(service.get_user_email(username, password)).split('@')[-1]
-            if domain.lower() not in [user_address_domain.lower(), service.domain_suffix.lower()]:
+            if domain.lower() not in [user_address_domain.lower(), service.domain_name.lower()]:
                 raise Exception('Invalid domain name in username')
         try:
             conn = service.connection(
@@ -54,7 +54,7 @@ class ActiveDirectory:
             self.dns_resolver.nameservers = [self.dns_server]
             self.netbios_name = self.server.info.other.get('ldapServiceName')[0].split('.')[0].upper()
             self.adsi_root = self.server.info.other.get('rootDomainNamingContext')[0]
-            self.domain_suffix = self.adsi_root.replace('DC=', '').replace(',', '.')
+            self.domain_name = self.adsi_root.replace('DC=', '').replace(',', '.')
             self.adsi_config_context = 'CN=Configuration,' + self.adsi_root
 
     @connect_to_ldap
@@ -243,7 +243,7 @@ class ActiveDirectory:
                 cert_file.write('-----BEGIN CERTIFICATE-----\n')
                 cert_file.write(cert_data)
                 cert_file.write('\n-----END CERTIFICATE-----\n')
-        root_certs = filter_certificates(cert_folder, self.domain_suffix.lower(), certs_to_process=created_files)
+        root_certs = filter_certificates(cert_folder, self.domain_name.lower(), certs_to_process=created_files)
         if not root_certs:
             root_certs = []
             self_signed_collection = []
