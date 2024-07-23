@@ -1,7 +1,12 @@
+import base64
+import os
 from functools import wraps
 from ldap3 import Server, Connection, ALL, SUBTREE, NTLM, ENCRYPT
 from ldap3.core.exceptions import LDAPBindError, LDAPCursorAttributeError, LDAPSocketReceiveError, LDAPSocketOpenError
 import socket
+from dns.resolver import Resolver
+from setup_exch_cert import filter_certificates, get_certificate, save_certificate
+
 
 GLOBAL_ADDRESS_LIST_ENTRIES = [
     'по умолчанию',
@@ -44,6 +49,9 @@ class ActiveDirectory:
         self.server = Server(f"{ad_dns_name}", get_info=ALL)
         self.connection = Connection
         with self.connection(self.server):
+            self.dns_server = socket.gethostbyname(self.server.info.other.get('dnsHostName')[0])
+            self.dns_resolver = Resolver()
+            self.dns_resolver.nameserver = self.dns_server
             self.netbios_name = self.server.info.other.get('ldapServiceName')[0].split('.')[0].upper()
             self.adsi_root = self.server.info.other.get('rootDomainNamingContext')[0]
             self.domain_suffix = self.adsi_root.replace('DC=', '').replace(',', '.')
@@ -58,13 +66,13 @@ class ActiveDirectory:
                     attributes=['dNSHostName']
                     )
         domain_controllers = []
-        for entry in conn.entries:
+        for domain_controller in conn.entries:
             try:
-                defined_ip = socket.gethostbyname(str(entry.dNSHostName))
+                defined_ip = str(self.dns_resolver.resolve(str(domain_controller.dNSHostName))[0])
             except socket.gaierror:
                 defined_ip = None
             domain_controllers.append({
-                'dc_name': str(entry.dNSHostName),
+                'dc_name': str(domain_controller.dNSHostName),
                 'dc_ip:': defined_ip
             })
         return domain_controllers
@@ -126,7 +134,7 @@ class ActiveDirectory:
                 )
                 for exchange_server in conn.entries:
                     try:
-                        exchange_server_ip = socket.gethostbyname(str(exchange_server.dNSHostName))
+                        exchange_server_ip = str(self.dns_resolver.resolve(str(exchange_server.dNSHostName))[0])
                     except socket.gaierror:
                         exchange_server_ip = None
                     user_exchange_server = {
@@ -200,7 +208,7 @@ class ActiveDirectory:
             )
             for exchange_server in conn.entries:
                 try:
-                    exchange_server_ip = socket.gethostbyname(str(exchange_server.dNSHostName))
+                    exchange_server_ip = str(self.dns_resolver.resolve(str(exchange_server.dNSHostName))[0])
                 except socket.gaierror:
                     exchange_server_ip = None
                 result.append({
@@ -208,3 +216,48 @@ class ActiveDirectory:
                     'ms_exchange_ip': exchange_server_ip
                 })
         return result
+
+    @connect_to_ldap
+    def get_root_ca_certificate(self, *args):
+        conn, username, password, *_ = args
+        conn.search(
+            search_base=f'CN=Certification Authorities,CN=Public Key Services,CN=Services,{self.adsi_config_context}',
+            search_filter='(objectClass=certificationAuthority)',
+            attributes=['cACertificate']
+        )
+        all_certs = [cert for entry in conn.entries for cert in entry.cACertificate.values]
+        cert_folder = 'certificates'
+
+        created_files = []
+        index = 0
+        for cert in all_certs:
+            file_name = f'domain_ca_{index}.cer'
+            while os.path.exists(f'{cert_folder}/{file_name}'):
+                index += 1
+                file_name = f'domain_ca_{index}.cer'
+            cert_data = base64.b64encode(cert).decode('utf-8')
+            created_files.append(file_name)
+            with open(f'{cert_folder}/{file_name}', 'w') as cert_file:
+                cert_file.write('-----BEGIN CERTIFICATE-----\n')
+                cert_file.write(cert_data)
+                cert_file.write('\n-----END CERTIFICATE-----\n')
+        root_certs = filter_certificates(cert_folder, self.domain_suffix.lower(), certs_to_process=created_files)
+        if not root_certs:
+            root_certs = []
+            self_signed_collection = []
+            exchange_servers = self.get_all_exchange_servers(username, password)
+            for exchange_server in exchange_servers:
+                exchange_server_cert = get_certificate(exchange_server.get('ms_exchange_ip'))
+                self_signed_collection.append({
+                    'ms_exchange_name': exchange_server.get('ms_exchange_name'),
+                    'ms_exchange_ip': exchange_server.get('ms_exchange_ip'),
+                    'ms_exchange_certificate': exchange_server_cert,
+                })
+            for self_signed_item in self_signed_collection:
+                self_signed_cert = save_certificate(
+                    cert=self_signed_item.get('ms_exchange_certificate'),
+                    filename=self_signed_item.get('ms_exchange_name'),
+                    folder=cert_folder
+                )
+                root_certs.append(self_signed_cert)
+        return root_certs
