@@ -8,3 +8,5 @@ check-lib:
 	poetry run python3 check_dependencies.py
 install: check-lib
 	poetry install --no-root
+console:
+	poetry run python manage.py shell_plus --ipython
