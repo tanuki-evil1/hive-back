@@ -5,6 +5,7 @@ from exchangelib import NTLM, Configuration
 from urllib.parse import urlparse
 import requests.adapters
 from exchangelib.protocol import BaseProtocol
+# from domain_controller import ActiveDirectory
 
 
 # Setup custom SSL cert
@@ -24,14 +25,21 @@ class RootCAAdapter(requests.adapters.HTTPAdapter):
 BaseProtocol.HTTP_ADAPTER_CLS = RootCAAdapter
 
 
-# Initial auth data
+# Надо думать
 DOMAIN_NAME = ''
-MAILSERVER = ''
-EMAIL = ''
-PASSWORD = ''
-USERNAME = f"{DOMAIN_NAME}\\{EMAIL.split('@')[0]}"
 
-credentials = Credentials(username=USERNAME, password=PASSWORD)
+# Идея получать примерно так, но надо подумать:
+# user.integrations.get(name='Active_directory').config.get('mailserver')
+MAILSERVER = ''
+
+# Идея получать по user.email
+EMAIL = ''
+
+# Идея получать примерно так, но надо подумать:
+# user.integrations.get(name='Active_directory').config.get('ad_pwd')
+PASSWORD = ''
+
+credentials = Credentials(username=EMAIL, password=PASSWORD)
 config = Configuration(
     credentials=credentials, auth_type=NTLM, server=MAILSERVER
 )
