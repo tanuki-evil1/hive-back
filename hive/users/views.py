@@ -22,7 +22,7 @@ class UserAPIView(generics.ListAPIView):
 class UserLogin(View):
     def get(self, request, *args, **kwargs):  # Отдаем форму, надо бы переписать компактнее этот класс
         form = UserLoginForm()
-        return render(request, 'login.html', {'form': form})  # Почему-то login.html не индексируется во внешней папке
+        return render(request, 'users/login.html', {'form': form})  # Почему-то login.html не индексируется во внешней папке
 
     def post(self, request, *args, **kwargs):
         form = UserLoginForm(request.POST)
