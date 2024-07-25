@@ -49,12 +49,12 @@ class ActiveDirectory:
         self.server = Server(f"{ad_dns_name}", get_info=ALL)
         self.connection = Connection
         with self.connection(self.server):
-            self.dns_server = socket.gethostbyname(self.server.info.other.get('dnsHostName')[0])
+            self.adsi_root = self.server.info.other.get('rootDomainNamingContext')[0]
+            self.domain_name = self.adsi_root.replace('DC=', '').replace(',', '.')
+            self.dns_server = socket.gethostbyname(self.domain_name)
             self.dns_resolver = Resolver()
             self.dns_resolver.nameservers = [self.dns_server]
             self.netbios_name = self.server.info.other.get('ldapServiceName')[0].split('.')[0].upper()
-            self.adsi_root = self.server.info.other.get('rootDomainNamingContext')[0]
-            self.domain_name = self.adsi_root.replace('DC=', '').replace(',', '.')
             self.adsi_config_context = 'CN=Configuration,' + self.adsi_root
 
     @connect_to_ldap

@@ -1,48 +1,46 @@
-import os
-from requests.adapters import HTTPAdapter
 from exchangelib import Credentials, Account
 from exchangelib import NTLM, Configuration
-from urllib.parse import urlparse
-import requests.adapters
-from exchangelib.protocol import BaseProtocol
-# from domain_controller import ActiveDirectory
+from exchangelib.protocol import BaseProtocol, NoVerifyHTTPAdapter
+from domain_controller import ActiveDirectory
+import urllib3
 
 
-# Setup custom SSL cert
-class RootCAAdapter(requests.adapters.HTTPAdapter):
-    """An HTTP adapter that uses a custom root CA certificate at a hard coded
-    location.
-    """
-
-    def cert_verify(self, conn, url, verify, cert):
-        cert_file = {
-            "": f"{os.path.dirname(__file__)}",
-        }[urlparse(url).hostname]
-        super().cert_verify(conn=conn, url=url, verify=cert_file, cert=cert)
+urllib3.disable_warnings()
 
 
 # Use this adapter class instead of the default
-BaseProtocol.HTTP_ADAPTER_CLS = RootCAAdapter
+BaseProtocol.HTTP_ADAPTER_CLS = NoVerifyHTTPAdapter
 
 
 # Надо думать
-DOMAIN_NAME = ''
+# DOMAIN_NAME = ''
+#
+# # Идея получать примерно так, но надо подумать:
+# # user.integrations.get(name='Active_directory').config.get('mailserver')
+# MAILSERVER = ''
+#
+# # Идея получать по user.email
+# EMAIL = ''
+# print(EMAIL)
+#
+# # Идея получать примерно так, но надо подумать:
+# # user.integrations.get(name='Active_directory').config.get('ad_pwd')
+# PASSWORD = ''
 
-# Идея получать примерно так, но надо подумать:
-# user.integrations.get(name='Active_directory').config.get('mailserver')
-MAILSERVER = ''
+# credentials = Credentials(username=EMAIL, password=PASSWORD)
+# config = Configuration(
+#     credentials=credentials, auth_type=NTLM, server=MAILSERVER
+# )
+# account = Account(primary_smtp_address=EMAIL, credentials=credentials, config=config)
+# print(account.contacts)
 
-# Идея получать по user.email
-EMAIL = ''
 
-# Идея получать примерно так, но надо подумать:
-# user.integrations.get(name='Active_directory').config.get('ad_pwd')
-PASSWORD = ''
-
-credentials = Credentials(username=EMAIL, password=PASSWORD)
-config = Configuration(
-    credentials=credentials, auth_type=NTLM, server=MAILSERVER
-)
-
-account = Account(primary_smtp_address=EMAIL, credentials=credentials, config=config)
-print(account)
+class ExchangeAccount(Account):
+    def __init__(self, domain_name, username, password):
+        active_directory = ActiveDirectory(domain_name)
+        email = active_directory.get_user_email(username, password)
+        credentials = Credentials(username=email, password=password)
+        server = active_directory.get_user_exchange_server(email, password).get('ms_exchange_ip')
+        config = Configuration(credentials=credentials, auth_type=NTLM, server=server)
+        super().__init__(primary_smtp_address=email, credentials=credentials, config=config)
+        self.default_gal = active_directory.get_default_gal(username, password)
