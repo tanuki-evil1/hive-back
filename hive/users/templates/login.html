@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+</head>
+<body>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Login</button>
+    {% if form.errors %}
+        <div class="errors">
+            {{ form.errors }}
+        </div>
+    {% endif %}
+</form>
+{% for user in users %}
+    <p>{{ user.id }}</p>
+    <p>{{ user.first_name }}</p>
+    <p>{{ user.last_name }}</p>
+    <p>{{ user.email }}</p>
+    <p>{{ user.username }}</p>
+{% endfor %}
+</body>
+</html>
