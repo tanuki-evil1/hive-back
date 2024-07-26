@@ -1,13 +1,11 @@
-from django.contrib.auth import authenticate, login
-from django.http import HttpResponse
-from django.shortcuts import render, redirect
-from django.views import View
-from rest_framework import generics
+from django.contrib.auth import authenticate, login, logout
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .forms import UserLoginForm
 from .models import User
 from .serializers import UserSerializer
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from integrations_test.active_directory.domain_controller import ActiveDirectory
 
@@ -19,28 +17,28 @@ class UserAPIView(generics.ListAPIView):
     serializer_class = UserSerializer
 
 
-class UserLogin(View):
-    def get(self, request, *args, **kwargs):  # Отдаем форму, надо бы переписать компактнее этот класс
-        form = UserLoginForm()
-        return render(request, 'users/login.html', {'form': form})  # Почему-то login.html не индексируется во внешней папке
+class UserLogin(APIView):
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        form = UserLoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-            user_in_db = User.objects.filter(username=username).exists()
-            if not user_in_db:  # Если пользователь в бд еще не сохранен - сохраняем
-                ad = ActiveDirectory('hive.com')
-                user_data = ad.get_user_base_data(username, password)
-                User.objects.create_user(first_name=user_data['first_name'], last_name=user_data['last_name'],
-                                         username=user_data['username'], email=user_data['email'], password=password)
+        username = request.data.get('username')
+        password = request.data.get('password')
+        print(username, password)
+        user_in_db = User.objects.filter(username=username).exists()
+        if not user_in_db:  # Если пользователь в бд еще не сохранен - сохраняем
+            ad = ActiveDirectory('hive.com')
+            user_data = ad.get_user_base_data(username, password)
+            User.objects.create_user(first_name=user_data['first_name'], last_name=user_data['last_name'],
+                                     username=user_data['username'], email=user_data['email'], password=password)
+        user = authenticate(request, username=username, password=password)
+        if user:
+            login(request, user)
+            return Response({'message': 'Logged in successfully'}, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
 
-            user = authenticate(request, username=username, password=password)
-            if user:
-                login(request, user)
-                return redirect('users')
-            else:
-                return HttpResponse('Неправильные данные')
 
-        return render(request, 'login.html', {'form': form})
+class UserLogout(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        logout(request)
+        return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
