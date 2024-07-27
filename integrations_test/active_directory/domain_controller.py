@@ -5,7 +5,7 @@ from ldap3 import Server, Connection, ALL, SUBTREE, NTLM, ENCRYPT
 from ldap3.core.exceptions import LDAPBindError, LDAPCursorAttributeError, LDAPSocketReceiveError, LDAPSocketOpenError
 import socket
 from dns.resolver import Resolver
-from setup_exch_cert import filter_certificates, get_certificate, save_certificate
+from integrations_test.active_directory.setup_exch_cert import filter_certificates, get_certificate, save_certificate
 
 
 GLOBAL_ADDRESS_LIST_ENTRIES = [
@@ -45,7 +45,7 @@ def connect_to_ldap(func):
 
 
 class ActiveDirectory:
-    def __init__(self, ad_dns_name):
+    def __init__(self, ad_dns_name): # Поправил определение методов и импорты
         self.server = Server(f"{ad_dns_name}", get_info=ALL)
         self.connection = Connection
         with self.connection(self.server):
