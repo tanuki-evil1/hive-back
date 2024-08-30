@@ -871,6 +871,17 @@ files = [
 ptyprocess = ">=0.5"
 
 [[package]]
+name = "prompt"
+version = "0.4.1"
+description = "Library for prompting input on the command line."
+optional = false
+python-versions = ">=3.3"
+files = [
+    {file = "prompt-0.4.1-py3-none-any.whl", hash = "sha256:98527de8dc3f0aa29669a39fbffeaf578ba6654dc836f737b6a5c6f9279002b7"},
+    {file = "prompt-0.4.1.tar.gz", hash = "sha256:8a7694b88f8c65188a983315e72582bf42fcc251b97042be1d2a2ad1aa0ebe0e"},
+]
+
+[[package]]
 name = "prompt-toolkit"
 version = "3.0.47"
 description = "Library for building powerful interactive command lines in Python"
@@ -1350,4 +1361,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "5f23811068eb376ec69e342b4dc565e0a575fab49e3a2b88cda3785acb6fb158"
+content-hash = "475bbcb88c4869cb03885cbce502a6dacede23814ba14e32bb659ad5f2c847a3"

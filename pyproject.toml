@@ -23,6 +23,7 @@ gssapi = "^1.8.3"
 pyopenssl = "^24.1.0"
 dnspython = "^2.6.1"
 cryptography = "^42.0.8"
+prompt = "^0.4.1"
 
 
 [tool.poetry.group.dev.dependencies]
